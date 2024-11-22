@@ -12,6 +12,7 @@
     
 ![output](https://github.com/user-attachments/assets/237e6fcd-1f30-41c2-a1bc-f986653f006a)
     
+---
 
 ## **1. 비선형 상태 변화 모델**
 
@@ -52,6 +53,8 @@
 
 ![image 8](https://github.com/user-attachments/assets/e6882507-71a4-4c30-8231-f4c5d16e09d7)
 
+---
+
 ## **2. 상태오차 모델**
 
 상태오차 벡터는 다음과 같이 정의됩니다:
@@ -60,6 +63,8 @@
 ![image 10](https://github.com/user-attachments/assets/3601407b-0225-4195-86e7-85fe2b54a0b4)
 
 ![image 11](https://github.com/user-attachments/assets/1af8b08b-4aed-4fe9-9f61-9f7e5cf2028b)
+
+---
 
 ## **3. 비선형 모델의 선형화**
 
@@ -98,13 +103,15 @@
 
 ![image 19](https://github.com/user-attachments/assets/876b04cb-d35c-4b87-908f-dfa6e76d9881)
 
----
+
 
 ### **3.4 피토센서 바이어스 오차 ($δb_{pitot}$)**
 
 피토센서 바이어스는 랜덤 워크를 따르므로:
 
 ![image 20](https://github.com/user-attachments/assets/e0ab1a5f-6cfc-4357-9248-38c3b6ecf482)
+
+---
 
 ## **4. Prediction Step**
 
@@ -121,6 +128,8 @@
 ![image 22](https://github.com/user-attachments/assets/412886ab-93c0-424c-ac48-a8d80d26be80)
 
 ![image 23](https://github.com/user-attachments/assets/990b9d28-657e-4158-9bb4-92691ab02466)
+
+---
 
 ## **5. Update Step**
 
@@ -223,6 +232,8 @@ GPS는 위치와 속도를 측정하며, 다음과 같은 공분산 행렬을 �
 ### (5) 공분산 업데이트:
 
 ![image 45](https://github.com/user-attachments/assets/a27994c6-3160-4cb5-8ddc-8c176beec30d)
+
+---
 
 ## **6. Error Reset**
 
