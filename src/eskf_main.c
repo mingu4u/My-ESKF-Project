@@ -1,96 +1,68 @@
-#include <math.h>
-#include <stdio.h>
-#include <stdbool.h>
-
-// Constants
-#define DIM_STATE 15  // State vector dimension (p, v, q, b_a, b_g, b_pitot)
-#define DIM_MEAS 13   // Measurement vector dimension (acc, mag, pitot, gps_pos, gps_vel)
-#define GRAVITY 9.81  // Gravitational constant
-
-
-// Helper macros for indexing
-#define IDX_POS 0      // Position in state
-#define IDX_VEL 3      // Velocity in state
-#define IDX_Q 6        // Quaternion in state
-#define IDX_BA 10      // Accelerometer bias in state
-#define IDX_BG 13      // Gyroscope bias in state
-#define IDX_BPITOT 14  // Pitot bias in state
-
-// Structure Definitions
-typedef struct {
-    double dt; // Time step
-    double q[4]; // Orientation quaternion [w, x, y, z]
-    double p[3]; // Position
-    double v[3]; // Velocity
-    double b_a[3]; // Accelerometer bias
-    double b_g[3]; // Gyroscope bias
-} State;
-
-typedef struct {
-    double acc[3];
-    double gyro[3];
-    double mag[3];
-    double gps_pos[3];
-    double gps_vel[3];
-    double pitot;
-} Measurement;
-
-// Kalman filter matrices
-typedef struct {
-    double F[DIM_STATE][DIM_STATE]; // State transition matrix
-    double P[DIM_STATE][DIM_STATE]; // State covariance
-    double Q[DIM_STATE][DIM_STATE]; // Process noise covariance
-    double H[DIM_MEAS_TOTAL][DIM_STATE]; // Measurement matrix
-    double R[DIM_MEAS_TOTAL][DIM_MEAS_TOTAL]; // Measurement noise covariance
-    double K[DIM_STATE][DIM_MEAS_TOTAL]; // Kalman gain
-} KalmanFilter;
-
-// // State variables
-// typedef struct {
-//     double state[DIM_STATE];   // X vector : [p, v, q, b_a, b_g, b_pitot] or [position, velocity, quaternion, acc_bias, gyro_bias, pitot_bias]
-//     double meas[DIM_MEAS];     // Z vector : [acc, mag, pitot, gps_pos, gps_vel]
-//     double P[DIM_STATE][DIM_STATE];  // Covariance matrix
-//     double Q[DIM_STATE][DIM_STATE];  // Process noise covariance
-// } ESKF;
-
-// Measurement noise covariance
-/** 
+/**
+ * @file eskf_main.c
+ * @author mingu Kang (mingu4u@naver.com)
+ * @brief Error State Kalman Filter (GPS+IMU+PITOT Fusion for more accurate Navigation)
+ * @version 0.1
  * @date 2024-11-23
- * @author mingu Kang
- * //TODO : 센서 데이터 시트 참고해 노이즈 공분산 데이터 찾아보기
-*/
-double R[DIM_MEAS][DIM_MEAS] = {
-    {0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  // Accelerometer noise
-    {0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0},  // Magnetometer noise
-    {0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0},  // Pitot noise
-    {0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0},  // GPS position noise
-    {0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0},  // GPS velocity noise
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1},
-};
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ * 
+ * @ Coordinate : NED (North-East-Down)
+ */
 
-// Function prototypes
-void prediction_step(ESKF* eskf, double dt, const double acc[], const double gyro[]);
-void predict_covariance(ESKF* eskf, double dt);
-void quaternion_to_rotation(const double q[4], double R[3][3]);
-void normalize_quaternion(double q[4]);
-void cross_product_matrix(const double v[3], double skew[3][3]);
 
-void update_step(ESKF* eskf, const double z[], const bool gps_available);
-void error_reset(ESKF* eskf);
+
+// Standard Library
+#include <string.h>
+
+// Custom Library
+#include "./include/imu_bias.h"
+#include "./include/eskf_main.h"
+
+
+// Create Instances
+    State state;
+    Measurement meas;
+    KalmanFilter kalmanfilter;
+
 
 int main() {
-    // Initialize ESKF
-    ESKF eskf = {0};          // Initialize eskf state
-    eskf.state[IDX_Q] = 1.0;  // Initialize quaternion as [1, 0, 0, 0] (no rotation)
-    // bool gps_available = true; // This flag's value will be up to real GPS Sensor updating state.
-    
+
+    initial_parameter();
+     
+    bool gps_available = true;  //HACK : This flag's value will be up to real GPS Sensor updating state.
+    update_biasNoise();
+
+    // for (int i = 0; i<3; i++) {
+    //     printf("%f ", state.b_a[i]);
+    // }
+
+    /**
+     * @date 2024-11-23
+     * @author mingu Kang
+     * // HACK : initial_parameter() 함수 내에서 지역변수 구조체가 전역 변수인 kalmanfilter로 잘 memcpy 됐는지 결과 확인하는 임시 디버깅 코드
+     
+        // for (int i = 0; i<DIM_MEAS; i++) {
+        //     for (int j = 0; j<DIM_MEAS; j++) {
+
+        //         printf("%f ", kalmanfilter.R[i][j]);
+        //     }
+        //     printf("\n");
+        // }
+
+        
+    */
+
+
+
+
+
+
+
+
+
+
     // Simulate some inputs
     /** 
  * @date 2024-11-23
@@ -99,43 +71,301 @@ int main() {
 */
 
     // IMU data (acceleration and angular velocity)
-    // double acc[3] = {0.0, 0.0, -GRAVITY};  // Accelerometer data
-    // double gyro[3] = {0.01, 0.02, 0.03};  // Gyroscope data
-
-    // Time step
-    // double dt = 0.01;
+    double acc[3] = {0.0, 0.0, -GRAVITY};  // Accelerometer data/
+    double gyro[3] = {0.01, 0.02, 0.03};  // Gyroscope data
 
     // Time step
     double dt = 0.01;
 
-    // Main loop
-    for (int t = 0; t < 1000; t++) {
+    // // Main loop
+    // for (int t = 0; t < 1000; t++) {
         // Prediction step
-        prediction_step(&eskf, dt, acc, gyro);
+        prediction_step(&state, dt, acc, gyro);
 
         // Update step based on GPS availability
-        update_step(&eskf, z, gps_available);
+        update_step(&state, &meas, gps_available);
 
         // Error reset step
-        error_reset(&eskf);
+        error_reset(&state, &kalmanfilter);
 
         // Simulate GPS unavailability
-        gps_available = (t % 50 != 0);
-    }
+        // gps_available = (t % 50 != 0);
+    // }
 
     return 0;
 }
 
-void prediction_step(ESKF* eskf, double dt, const double acc[], const double gyro[]) {
-    // Predict state using IMU data
 
 
 
-    // (Placeholder for integration of accelerometer and gyroscope data)
-    // Update covariance using process noise (not shown for simplicity)
+
+
+
+void initial_parameter() {
+    // 1. Initialize ESKF variables
+    memset(&state, 0.0, sizeof(state));               // Initialize eskf state
+    memset(&meas, 0.0, sizeof(state));                // Initialize eskf meas
+    memset(&kalmanfilter, 0.0, sizeof(kalmanfilter)); // Initialize eskf Matrixs
+    state.q[0] = 1.0;    // Initialize quaternion as [1, 0, 0, 0] (no rotation)
+
+    // 2. Set Measurement noise Covariance R 
+    /** 
+     * @date 2024-11-23
+     * @author mingu Kang
+     * //TODO : 센서 데이터 시트 참고해 노이즈 공분산 데이터 찾아보기
+    */
+
+    KalmanFilter kf = {
+        .R = {
+            {0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  // Accelerometer noise
+            {0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0},  // Magnetometer noise
+            {0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0},  // Pitot noise
+            {0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0, 0, 0, 0},  // GPS position noise
+            {0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0},  // GPS velocity noise
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1},
+        },
+
+        .Q = {
+            {0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0.001, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0.001, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0.001, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0.001, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0.001, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0.001, 0, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.001, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.001, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.001},
+         }
+    };
+
+    memcpy(&kalmanfilter, &kf, sizeof(kf));
+
 }
 
-void update_step(ESKF* eskf, const double z[], const bool gps_available) {
+void prediction_step(State* state, KalmanFilter* kalmanfilter, double dt, const double acc[], const double gyro[]) {
+    // Extract state variables (k-1|k-1)
+    double* position = state->p;
+    double* velocity = state->v;
+    double* quaternion = state->q;
+    double* acc_bias = state->b_a;
+    double* gyro_bias = state->b_g;
+
+    // Step 1: Correct sensor measurements for biases
+    
+    double acc_corrected[3] = {acc[0] - acc_bias[0], acc[1] - acc_bias[1], acc[2] - acc_bias[2]};
+    double gyro_corrected[3] = {gyro[0] - gyro_bias[0], gyro[1] - gyro_bias[1], gyro[2] - gyro_bias[2]};
+
+    // Step 2: Update quaternion, Convert quaternion to rotation matrix
+    double R_q[3][3];
+    double dq[4] = {0, 0.5 * gyro_corrected[0], 0.5 * gyro_corrected[1], 0.5 * gyro_corrected[2]};
+    double q_dot[4] = {0};
+    
+        // 2.1 Calculate q_dot 
+        quaternion_product(quaternion, dq, q_dot);
+        
+        // 2.2 update quaternion
+        for (int i = 0; i < 4; i++) {
+            quaternion[i] += dq[i] * dt;
+        }
+
+        // 2.3 normalize quaternion
+        normalize_quaternion(quaternion);
+
+        // 2.4 Calculate R(q) based on Updated quaternion
+        quaternion_to_rotation(quaternion, R_q);
+
+    // Step 3: Compute acceleration in the inertial frame (R(q)*(a_acc - b_a) + g)
+    double acc_inertial[3] = {
+        R_q[0][0] * acc_corrected[0] + R_q[0][1] * acc_corrected[1] + R_q[0][2] * acc_corrected[2],
+        R_q[1][0] * acc_corrected[0] + R_q[1][1] * acc_corrected[1] + R_q[1][2] * acc_corrected[2],
+        R_q[2][0] * acc_corrected[0] + R_q[2][1] * acc_corrected[1] + R_q[2][2] * acc_corrected[2] + GRAVITY
+    };
+
+    // Step 4: Predict State (k-1|k-1 --> k|k-1)
+
+        // 4.1 Position & Velocity
+        for (int i = 0; i < 3; i++) {
+            velocity[i] += acc_inertial[i] * dt;
+            position[i] += velocity[i] * dt;
+        }
+
+        // 4.2 quaternion (already done at Step 2)
+
+        // 4.3 Sensor bias (already done at main() -> update_biasNoise())
+
+
+    // Step 5: Compute F, Get P, Q and Update P (k-1|k-1 -> k|k-1)            (P : Covariance Matrix)
+    predict_covariance(state, kalmanfilter, R_q, acc, gyro);
+
+}
+
+// Function to compute quaternion product
+void quaternion_product(const double q1[4], const double q2[4], double q_out[4]) {
+    q_out[0] = q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3];
+    q_out[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2];
+    q_out[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1];
+    q_out[3] = q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0];
+}
+
+// Function to normalize quaternion
+void normalize_quaternion(double q[4]) {
+    double norm = sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+    if (norm == 0.0) {
+        // Handle invalid quaternion: reset to identity quaternion
+        q[0] = 1.0;
+        q[1] = 0.0;
+        q[2] = 0.0;
+        q[3] = 0.0;
+    } 
+    else {
+        for (int i = 0; i < 4; i++) {
+            q[i] /= norm;
+        }
+    }
+}
+
+// Convert quaternion to rotation matrix (R_q)
+void quaternion_to_rotation(const double q[4], double R_q[3][3]) {
+    double q_w = q[0], q_x = q[1], q_y = q[2], q_z = q[3];
+    R_q[0][0] = 1 - 2 * (q_y * q_y + q_z * q_z);
+    R_q[0][1] = 2 * (q_x * q_y - q_w * q_z);
+    R_q[0][2] = 2 * (q_x * q_z + q_w * q_y);
+    R_q[1][0] = 2 * (q_x * q_y + q_w * q_z);
+    R_q[1][1] = 1 - 2 * (q_x * q_x + q_z * q_z);
+    R_q[1][2] = 2 * (q_y * q_z - q_w * q_x);
+    R_q[2][0] = 2 * (q_x * q_z - q_w * q_y);
+    R_q[2][1] = 2 * (q_y * q_z + q_w * q_x);
+    R_q[2][2] = 1 - 2 * (q_x * q_x + q_y * q_y);
+}
+
+// Predict the covariance matrix
+void predict_covariance(State* state, KalmanFilter* kalmanfilter, double R_q[3][3], const double acc[], const double gyro[]) {
+    
+    // Placeholder: Compute F and Q matrices, then update P
+    compute_F_matrix(state, kalmanfilter, R_q, acc, gyro);
+
+
+    // Placeholder matrices for intermediate results
+    double FP[DIM_STATE][DIM_STATE] = {0};
+    double FPFt[DIM_STATE][DIM_STATE] = {0};
+    double Ft[DIM_STATE][DIM_STATE] = {0};
+
+    // Compute FP = F * P
+    matrix_multiply(kalmanfilter->F, kalmanfilter->P, FP);
+
+    // Compute Ft = F^T
+    matrix_transpose(kalmanfilter->F, Ft);
+
+    // Compute FPFt = FP * F^T
+    matrix_multiply(FP, Ft, FPFt);
+
+    // Update P = F * P * F^T + Q
+    for (int i = 0; i < DIM_STATE; i++) {
+        for (int j = 0; j < DIM_STATE; j++) {
+            kalmanfilter->P[i][j] = FPFt[i][j] + kalmanfilter->Q[i][j];
+        }
+    }
+
+}
+
+void compute_F_matrix(State* state, KalmanFilter* kalmanfilter, double R_q[3][3], const double acc[], const double gyro[]) {
+
+    double F[DIM_STATE][DIM_STATE];
+    memset(F, 0.0, sizeof(double) * DIM_STATE * DIM_STATE);
+    
+    
+    // Position derivatives (dp/dv)
+    for (int i = 0; i < 3; i++) {
+        F[i][i + 3] = 1.0; // dp/dv = 1
+    }
+
+    // Velocity derivatives (dv/dq and acceleration bias)
+    double ax = acc[0];
+    double ay = acc[1];
+    double az = acc[2];
+
+    double a_sqew[3][3] =   {
+                            {0.0, -az, ay},
+                            {az, 0.0, -ax},
+                            {-ay, ax, 0.0}
+                            };
+    
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            // F[i + 3][j + 6] = 0.0;
+            for (int k = 0; k < 3; k++) {
+                F[i + 3][j + 6] += -R_q[i][k] * a_sqew[k][j];
+            }            
+            F[i + 3][j + 9] = -R_q[i][j];
+        }
+    }   
+
+    // Quaternion derivatives 
+    double wx = gyro[0];
+    double wy = gyro[1];    
+    double wz = gyro[2];
+
+    double w_sqew[3][3] =   {
+                            {0.0, -wz, wy},
+                            {wz, 0.0, -wx},
+                            {-ay, wx, 0.0}
+                            };    
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            F[i + 6][j + 6] = -w_sqew[i][j]; // dq/
+        }
+        F[i + 6][i + 12] = -1.0; // dq/db_g
+    }
+    
+    memcpy(&kalmanfilter->F, &F, sizeof(F));
+
+}
+
+
+
+// Multiply two matrices (A * B)
+void matrix_multiply(double A[DIM_STATE][DIM_STATE], double B[DIM_STATE][DIM_STATE], double result[DIM_STATE][DIM_STATE]) {
+    for (int i = 0; i < DIM_STATE; i++) {
+        for (int j = 0; j < DIM_STATE; j++) {
+            result[i][j] = 0.0;
+            for (int k = 0; k < DIM_STATE; k++) {
+                result[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+// Transpose a matrix
+void matrix_transpose(double A[DIM_STATE][DIM_STATE], double result[DIM_STATE][DIM_STATE]) {
+    for (int i = 0; i < DIM_STATE; i++) {
+        for (int j = 0; j < DIM_STATE; j++) {
+            result[i][j] = A[j][i];
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+void update_step(State* state, const Measurement* meas, const bool gps_available) {
     // Use all sensors if GPS is available
     if (gps_available) {
         // Include GPS position and velocity in update step
@@ -148,7 +378,7 @@ void update_step(ESKF* eskf, const double z[], const bool gps_available) {
     // Update state and covariance (details omitted for brevity)
 }
 
-void error_reset(ESKF* eskf) {
+void error_reset(State* state, KalmanFilter *kalmanfilter) {
     // Reset state errors (normalize quaternion and zero out error terms)
     // Adjust covariance matrix using G matrix
     // Placeholder implementation
