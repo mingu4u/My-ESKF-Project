@@ -65,10 +65,10 @@ int main() {
 
     // Simulate some inputs
     /** 
- * @date 2024-11-23
- * @author mingu Kang
- * //TODO : 데이터셋 활용해 ESKF 사전 검증해보면 좋을듯
-*/
+     * @date 2024-11-23
+     * @author mingu Kang
+     * //TODO : 데이터셋 활용해 ESKF 사전 검증해보면 좋을듯
+    */
 
     // IMU data (acceleration and angular velocity)
     double acc[3] = {0.0, 0.0, -GRAVITY};  // Accelerometer data/
@@ -80,7 +80,7 @@ int main() {
     // // Main loop
     // for (int t = 0; t < 1000; t++) {
         // Prediction step
-        prediction_step(&state, dt, acc, gyro);
+        prediction_step(&state, &kalmanfilter, dt, acc, gyro);
 
         // Update step based on GPS availability
         update_step(&state, &meas, gps_available);

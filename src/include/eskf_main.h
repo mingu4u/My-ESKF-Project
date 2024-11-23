@@ -59,12 +59,20 @@ typedef struct {
 
 // Function prototypes
 void initial_parameter();
-void prediction_step(State* state, double dt, const double acc[], const double gyro[]);
-void predict_covariance(State* state, KalmanFilter kalmanfilter, double dt);
-void quaternion_to_rotation(const double q[4], double R_q[3][3]);
-void normalize_quaternion(double q[4]);
+void prediction_step(State* state, KalmanFilter* kalmanfilter, double dt, const double acc[], const double gyro[]);
+void predict_covariance(State* state, KalmanFilter* kalmanfilter, double R_q[3][3], const double acc[], const double gyro[]);
+void compute_F_matrix(State* state, KalmanFilter* kalmanfilter, double R_q[3][3], const double acc[], const double gyro[]);
 
 void cross_product_matrix(const double v[3], double skew[3][3]);
 void quaternion_product(const double q1[4], const double q2[4], double q_out[4]);
+void normalize_quaternion(double q[4]);
+void quaternion_to_rotation(const double q[4], double R_q[3][3]);
+
+void matrix_multiply(double A[DIM_STATE][DIM_STATE], double B[DIM_STATE][DIM_STATE], double result[DIM_STATE][DIM_STATE]);
+void matrix_transpose(double A[DIM_STATE][DIM_STATE], double result[DIM_STATE][DIM_STATE]);
+
+
+
+
 void update_step(State* state, const Measurement* meas, const bool gps_available);
 void error_reset(State* state, KalmanFilter* kalmanfilter);
