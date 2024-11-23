@@ -84,7 +84,7 @@
 
 ![image 14](https://github.com/user-attachments/assets/9a71c799-e314-44e2-a92d-4ea5ec1a84c5)
 
-![image 15](https://github.com/user-attachments/assets/2e9acb04-3a73-4d22-8c8a-34c6b656b2e9)
+
 
 실제 값과 추정 값 간의 차이로 정의:
 
@@ -94,11 +94,14 @@
 
 ![image 17](https://github.com/user-attachments/assets/c0a6d73d-3765-4996-baaf-71ca0d1227da)
 
+![image 15](https://github.com/user-attachments/assets/2e9acb04-3a73-4d22-8c8a-34c6b656b2e9)
+
 ### **3.3 자세 오차 (δθ)**
 
 자세 변화 모델은:
 
 소오차 근사 ($R(q) ≈ R(q̂)(I − [δθ]_×$))를 적용하면:
+
 ![image 18](https://github.com/user-attachments/assets/206eec78-88a9-4c2d-826c-f3c4872d1e8c)
 
 ![image 19](https://github.com/user-attachments/assets/876b04cb-d35c-4b87-908f-dfa6e76d9881)
