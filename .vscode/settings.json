@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "memory.h": "c",
+        "eskf_main.h": "c",
+        "imu_bias.h": "c",
+        "math.h": "c",
+        "stdint.h": "c"
+    },
+    "C_Cpp.default.compilerPath": "C:\\MinGW\\bin\\gcc.exe"
+}
