@@ -50,6 +50,9 @@ typedef struct {
     double K[DIM_STATE][DIM_MEAS]; // Kalman gain
 } KalmanFilter;
 
+double gravity = {0.0, 0.0, GRAVITY};
+double m_ref = {29000, -3500, -36000}; // Location : South Korea, Sacheon Si 
+
 #pragma pack(pop)
 
 // Create Instances

@@ -366,6 +366,13 @@ void matrix_transpose(double A[DIM_STATE][DIM_STATE], double result[DIM_STATE][D
 
 
 void update_step(State* state, const Measurement* meas, const bool gps_available) {
+         // Extract state variables (k-1|k-1)
+    double* position = state->p;
+    double* velocity = state->v;
+    double* quaternion = state->q;
+    double* acc_bias = state->b_a;
+    double* gyro_bias = state->b_g;
+    
     // Use all sensors if GPS is available
     if (gps_available) {
         // Include GPS position and velocity in update step
@@ -373,6 +380,8 @@ void update_step(State* state, const Measurement* meas, const bool gps_available
     } else {
         // Use only accelerometer, magnetometer, and pitot sensors
         // Measurement model and Kalman gain computation (not shown for simplicity)
+        meas->
+    
     }
 
     // Update state and covariance (details omitted for brevity)
