@@ -359,7 +359,32 @@ void matrix_transpose(double A[DIM_STATE][DIM_STATE], double result[DIM_STATE][D
 
 
 
+void update_step(State* state, StateError* state_error, const Measurement* meas, KalmanFilter* kf, 
+                const bool gps_available) {
+    // Measurement model prediction
+    double h[DIM_MEAS] = {0};
+    compute_measurement_model(state, h);
 
+    // Compute Kalman gain
+    double K[DIM_STATE][DIM_MEAS] = {0};
+    compute_kalman_gain(kf);
+
+    // Compute measurement residual (y = z - h(x))
+    double y[DIM_MEAS] = {0};
+    compute_residual(meas, h, y);
+
+    // Update state error (delta_x = delta_x + K * y)
+    update_state_error(state_error, K, y);
+
+    // Apply updated state error to the state variables
+    apply_state_error(state, state_error);
+
+    // Reset state error
+    reset_state_error(state_error);
+
+    // Update covariance matrix (P = (I - K * H) * P)
+    update_covariance(kf);
+}
 
 
 
@@ -380,7 +405,7 @@ void update_step(State* state, const Measurement* meas, const bool gps_available
     } else {
         // Use only accelerometer, magnetometer, and pitot sensors
         // Measurement model and Kalman gain computation (not shown for simplicity)
-        meas->
+      
     
     }
 

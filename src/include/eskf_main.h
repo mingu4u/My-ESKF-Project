@@ -32,6 +32,15 @@ typedef struct {
 } State;
 
 typedef struct {
+    double delta_p[3];      // Position error
+    double delta_v[3];      // Velocity error
+    double delta_theta[3];  // Attitude error (small rotation vector)
+    double delta_b_a[3];    // Accelerometer bias error
+    double delta_b_g[3];    // Gyroscope bias error
+    double delta_b_p;       // Pitot bias error
+} StateError;
+
+typedef struct {
     double acc[3];
     double gyro[3];
     double mag[3];
@@ -57,6 +66,7 @@ double m_ref = {29000, -3500, -36000}; // Location : South Korea, Sacheon Si
 
 // Create Instances
     extern State state;
+    extern StateError state_error;
     extern Measurement meas;
     extern KalmanFilter kalmanfilter;
 
