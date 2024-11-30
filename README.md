@@ -144,20 +144,26 @@
 각 센서의 측정 모델은 다음과 같이 정의됩니다:
 
 - **가속도계**:
+- 
+![h_acc](https://github.com/user-attachments/assets/5bc20335-1b92-4342-9fd3-9b40a13fbe00)
 
-![image 26](https://github.com/user-attachments/assets/af7be3ea-7e13-4a58-9588-27b8adb734bc)
 
 - **지자계**:
 
-![image 27](https://github.com/user-attachments/assets/6c534d74-5555-46d5-a11e-132c94dba534)
+![h_mag](https://github.com/user-attachments/assets/4bf69f8e-e4e7-4ff1-9a02-a62e393b1eab)
+
 
 - **GPS**:
 
-![image 28](https://github.com/user-attachments/assets/a74f2eb5-41de-4158-9c1e-670db58eb0bd)
+![h_gps_pos](https://github.com/user-attachments/assets/7392b4dd-511f-4b1d-852a-31d852444862)
+
+![h_gps_vel](https://github.com/user-attachments/assets/b80c82bf-3247-44f9-a246-245df7effd2a)
+
 
 - **피토센서**:
 
-![image 29](https://github.com/user-attachments/assets/58d1e3ff-958e-4a23-b63e-4ff18a08362b)
+![h_pitot](https://github.com/user-attachments/assets/584c9f6c-6237-4eb3-88fa-73919ba2d885)
+
 
 ### (2) 측정 자코비안 행렬 $\mathbf{H}$:
 
