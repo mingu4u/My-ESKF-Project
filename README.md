@@ -230,9 +230,11 @@ GPS는 위치와 속도를 측정하며, 다음과 같은 공분산 행렬을 �
 
 ### (4) 상태 업데이트:
 
-![image 44](https://github.com/user-attachments/assets/1721bf7e-cb71-42e0-8704-2938d9a667c3)
+![y_k](https://github.com/user-attachments/assets/b007701b-b56d-446c-851d-117259979ec5)
 
-![image 24](https://github.com/user-attachments/assets/ca0dd5e0-b32a-4a1f-8ba4-14fa793d6161)
+![delta_x_kk](https://github.com/user-attachments/assets/c9e13d6a-a3f9-482a-9d36-13ebea42fe79)
+
+![x_kk](https://github.com/user-attachments/assets/4093d728-667f-443a-b3f8-6d98c3b160c3)
 
 
 ### (5) 공분산 업데이트:
